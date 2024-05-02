@@ -1,4 +1,4 @@
-namespace TheAppManager.Models;
+namespace TheAppManager.Forecast;
 
 public record WeatherForecast(
     DateOnly Date,

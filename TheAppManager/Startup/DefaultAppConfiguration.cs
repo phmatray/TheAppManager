@@ -1,4 +1,4 @@
-using TheAppManager.Endpoints;
+using TheAppManager.Forecast;
 
 namespace TheAppManager.Startup;
 
@@ -7,6 +7,8 @@ public class DefaultAppConfiguration : IAppConfigurationStrategy
     public virtual void ConfigureServices(IServiceCollection services)
     {
         // Add services to the container.
+        services.AddScoped<WeatherForecastService>();
+        
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
