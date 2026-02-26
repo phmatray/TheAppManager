@@ -40,6 +40,16 @@ TheAppManager provides a clean abstraction (`IAppConfigurationStrategy`) for def
           └────────────────┘   └────────────────┘
 ```
 
+## Features
+
+- **Strategy pattern for startup** — Swap entire application configurations by implementing a single `IAppConfigurationStrategy` interface with three methods: services, middleware, and endpoints
+- **One-line startup** — Launch a fully configured ASP.NET Core app with `AppManager.StartApplication(args)` and sensible defaults
+- **Fluent builder API** — Use `AppManagerBuilder` to chain builder configuration, strategy application, and app construction in a readable pipeline
+- **Async support** — Run applications asynchronously with `StartApplicationAsync` and `RunAsync` for non-blocking startup scenarios
+- **Extensible default configuration** — Inherit from `DefaultAppConfiguration` and override only the methods you need, keeping the base HTTPS and routing behavior
+- **Builder hook** — Inject custom `WebApplicationBuilder` configuration (e.g., additional config sources, logging) via an `Action<WebApplicationBuilder>` callback
+- **Zero external dependencies** — Built solely on `Microsoft.AspNetCore.App` framework reference with no third-party runtime packages
+
 ## Installation
 
 ```bash
