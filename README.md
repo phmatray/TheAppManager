@@ -6,6 +6,21 @@
 [![NuGet](https://img.shields.io/nuget/v/TheAppManager.svg)](https://www.nuget.org/packages/TheAppManager)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Table of Contents
+
+- [Overview](#overview)
+  - [Architecture](#architecture)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Custom Configuration](#custom-configuration)
+  - [Extending the Default Configuration](#extending-the-default-configuration)
+  - [Async Support](#async-support)
+  - [Builder Configuration Hook](#builder-configuration-hook)
+  - [Advanced: Using AppManagerBuilder](#advanced-using-appmanagerbuilder)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Overview
 
 TheAppManager provides a clean abstraction (`IAppConfigurationStrategy`) for defining custom startup configurations in ASP.NET Core applications. Using the Strategy pattern, it makes it easy to swap configurations across environments, keep startup logic organized, and reduce boilerplate.
