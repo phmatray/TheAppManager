@@ -1,14 +1,13 @@
-namespace TheAppManager.Forecast;
+namespace TheAppManager.Sample.Forecast;
 
 public static class WeatherForecastEndpoints
 {
     public static void MapGetWeatherForecasts(this IEndpointRouteBuilder app)
     {
         app.MapGet("/weatherforecast", Handler)
-            .WithName("GetWeatherForecast")
-            .WithOpenApi();
+            .WithName("GetWeatherForecast");
     }
-    
+
     private static IResult Handler(WeatherForecastService service)
     {
         try

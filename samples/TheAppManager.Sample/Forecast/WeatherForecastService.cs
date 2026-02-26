@@ -1,4 +1,4 @@
-namespace TheAppManager.Forecast;
+namespace TheAppManager.Sample.Forecast;
 
 public class WeatherForecastService
 {
@@ -10,16 +10,12 @@ public class WeatherForecastService
 
     public IEnumerable<WeatherForecast> GetForecasts()
     {
-        var forecast = Enumerable
+        return Enumerable
             .Range(1, 5)
-            .Select(index => new WeatherForecast
-            (
+            .Select(index => new WeatherForecast(
                 DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
                 Random.Shared.Next(-20, 55),
-                Summaries[Random.Shared.Next(Summaries.Length)]
-            ))
+                Summaries[Random.Shared.Next(Summaries.Length)]))
             .ToArray();
-
-        return forecast;
     }
 }
