@@ -1,31 +1,27 @@
-namespace TheAppManager.Startup;
+using TheAppManager.Startup;
 
-public class CustomAppConfiguration : DefaultAppConfiguration
+namespace TheAppManager.Sample;
+
+/// <summary>
+/// Demonstrates extending the sample configuration with authentication middleware.
+/// </summary>
+public class CustomAppConfiguration : SampleAppConfiguration
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Retain base configurations
         base.ConfigureServices(services);
-        
-        // Additional custom service
         services.AddAuthentication();
     }
 
     public override void ConfigureMiddleware(WebApplication app)
     {
-        // Retain base middleware
         base.ConfigureMiddleware(app);
-        
-        // Apply authentication middleware
         app.UseAuthentication();
     }
 
     public override void ConfigureEndpoints(IEndpointRouteBuilder endpoints)
     {
-        // Retain base endpoints
         base.ConfigureEndpoints(endpoints);
-        
-        // Additional endpoint
         endpoints.MapGet("/custom", () => "Custom Endpoint!");
     }
 }
