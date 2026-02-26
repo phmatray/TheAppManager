@@ -1,0 +1,27 @@
+# CODEOWNERS — phmatray/TheAppManager
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @phmatray
+
+# Source code (core library)
+/src/ @phmatray
+
+# Tests
+/tests/ @phmatray
+
+# Samples
+/samples/ @phmatray
+
+# CI/CD workflows
+/.github/ @phmatray
+
+# Build and project configuration
+*.sln @phmatray
+*.props @phmatray
+global.json @phmatray
+renovate.json @phmatray
+
+# Documentation
+*.md @phmatray
+LICENSE @phmatray
