@@ -5,23 +5,36 @@
     ":automergeMinor",
     "schedule:earlyMondays"
   ],
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "description": "Auto-merge minor and patch updates",
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "automerge": true
     },
     {
       "description": "Group all non-major NuGet updates",
-      "matchManagers": ["nuget"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "nuget"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "nuget non-major"
     },
     {
       "description": "Require dashboard approval for major updates",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "dependencyDashboardApproval": true
     }
-  ]
+  ],
+  "platformAutomerge": true
 }
