@@ -1,0 +1,126 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using TheAppManager.Modules;
+
+namespace TheAppManager.Testing;
+
+/// <summary>
+/// A test host that builds a TestServer from registered modules.
+/// Provides a fluent API for integration testing with IAppModule implementations.
+/// </summary>
+public class AppModuleTestHost : IAsyncDisposable
+{
+    private readonly AppModuleCollection _modules = new();
+    private readonly List<Action<WebApplicationBuilder>> _builderConfigurations = [];
+    private WebApplication? _app;
+    private HttpClient? _client;
+
+    /// <summary>
+    /// Adds a module by type.
+    /// </summary>
+    public AppModuleTestHost Add<TModule>() where TModule : IAppModule, new()
+    {
+        _modules.Add<TModule>();
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an existing module instance.
+    /// </summary>
+    public AppModuleTestHost Add(IAppModule module)
+    {
+        _modules.Add(module);
+        return this;
+    }
+
+    /// <summary>
+    /// Conditionally adds a module.
+    /// </summary>
+    public AppModuleTestHost AddIf<TModule>(bool condition) where TModule : IAppModule, new()
+    {
+        _modules.AddIf<TModule>(condition);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the WebApplicationBuilder before modules are applied.
+    /// </summary>
+    public AppModuleTestHost ConfigureBuilder(Action<WebApplicationBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        _builderConfigurations.Add(configure);
+        return this;
+    }
+
+    /// <summary>
+    /// Builds and starts the test host.
+    /// </summary>
+    public async Task<AppModuleTestHost> StartAsync()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+
+        foreach (var configure in _builderConfigurations)
+        {
+            configure(builder);
+        }
+
+        var modules = _modules.GetModules();
+        foreach (var module in modules)
+        {
+            module.ConfigureServices(builder);
+        }
+
+        _app = builder.Build();
+
+        foreach (var module in modules)
+        {
+            module.ConfigureMiddleware(_app);
+        }
+
+        foreach (var module in modules)
+        {
+            module.ConfigureEndpoints(_app);
+        }
+
+        await _app.StartAsync();
+        return this;
+    }
+
+    /// <summary>
+    /// Gets an HttpClient configured to send requests to the test server.
+    /// </summary>
+    public HttpClient GetTestClient()
+    {
+        if (_app is null)
+            throw new InvalidOperationException("Call StartAsync() before getting a test client.");
+
+        _client ??= _app.GetTestClient();
+        return _client;
+    }
+
+    /// <summary>
+    /// Gets a service from the test host's dependency injection container.
+    /// </summary>
+    public T GetRequiredService<T>() where T : notnull
+    {
+        if (_app is null)
+            throw new InvalidOperationException("Call StartAsync() before resolving services.");
+
+        return _app.Services.GetRequiredService<T>();
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        _client?.Dispose();
+        if (_app is not null)
+        {
+            await _app.StopAsync();
+            await _app.DisposeAsync();
+        }
+    }
+}

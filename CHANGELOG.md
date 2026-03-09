@@ -7,19 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-03-09
+
+### Added
+
+- `IAppModule` interface with default method implementations — modules only override what they need
+- `AppModuleCollection` for fluent module registration with `Add<T>()`, `Add(instance)`, `AddIf<T>(condition)`, `Replace<TOld, TNew>()`, `AddFromAssemblyOf<T>()`, `AddFromAssembly(assembly)`
+- `ModuleDiscovery` for automatic assembly scanning of `IAppModule` implementations
+- `AppModuleTestHost` for integration testing modules with TestServer
+- Auto-discovery mode — call `AppManager.Start(args)` without a configure callback to discover modules automatically
+- Registration-order execution — modules are applied in the order they are registered
+- Renovate configuration for automated dependency updates
+
 ### Changed
 
+- `AppManager.StartApplication()` renamed to `AppManager.Start()`
+- `AppManager.StartApplicationAsync()` renamed to `AppManager.StartAsync()`
+- `AppManagerBuilder.Build()` now takes `AppModuleCollection` instead of `IAppConfigurationStrategy`
+- `ConfigureServices` now receives `WebApplicationBuilder` instead of `IServiceCollection`
 - Restructured project into class library (`src/TheAppManager`), sample app (`samples/TheAppManager.Sample`), and test project (`tests/TheAppManager.Tests`)
 - Upgraded target framework to .NET 10
 - Updated CI actions: `actions/checkout` to v6, `actions/setup-dotnet` to v5, `actions/upload-artifact` to v6
 - Updated `Swashbuckle.AspNetCore` to v10
 - Updated `xunit.runner.visualstudio` to 3.1.5
 - Updated `dotnet-sdk` to v10.0.103
-
-### Added
-
-- Renovate configuration for automated dependency updates
 - Updated README with architecture diagram, installation instructions, and usage examples
+
+### Removed
+
+- `IAppConfigurationStrategy` interface — replaced by `IAppModule`
+- `DefaultAppConfiguration` class — no opinionated defaults; modules are inert by default
+
+### Breaking Changes
+
+- Complete API redesign — v1.x code is not compatible. See README for migration guidance.
 
 ## [0.1.0] - 2024-05-01
 

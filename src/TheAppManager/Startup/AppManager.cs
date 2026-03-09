@@ -1,8 +1,12 @@
+using System.Reflection;
+using Microsoft.AspNetCore.Builder;
+using TheAppManager.Modules;
+
 namespace TheAppManager.Startup;
 
 /// <summary>
 /// Manages the lifecycle of an ASP.NET Core web application.
-/// Use <see cref="StartApplication"/> or <see cref="StartApplicationAsync"/> for a simplified startup experience,
+/// Use <see cref="Start"/> or <see cref="StartAsync"/> for a simplified startup experience,
 /// or use <see cref="AppManagerBuilder"/> for more control.
 /// </summary>
 public class AppManager
@@ -33,51 +37,78 @@ public class AppManager
     }
 
     /// <summary>
-    /// Creates, configures, and runs a web application using the provided strategy.
+    /// Creates, configures, and runs a web application using the provided modules.
+    /// When no modules are configured, modules are auto-discovered from the entry assembly.
     /// </summary>
     /// <param name="args">Command-line arguments.</param>
-    /// <param name="configurationStrategy">
-    /// The configuration strategy to use. If <c>null</c>, <see cref="DefaultAppConfiguration"/> is used.
+    /// <param name="configure">
+    /// An optional callback to register modules. If <c>null</c>, modules are discovered automatically
+    /// from the entry assembly.
     /// </param>
     /// <param name="configureBuilder">
     /// An optional callback to configure the <see cref="WebApplicationBuilder"/> before building.
     /// </param>
-    public static void StartApplication(
+    public static void Start(
         string[] args,
-        IAppConfigurationStrategy? configurationStrategy = null,
+        Action<AppModuleCollection>? configure = null,
         Action<WebApplicationBuilder>? configureBuilder = null)
     {
         ArgumentNullException.ThrowIfNull(args);
 
-        configurationStrategy ??= new DefaultAppConfiguration();
+        var modules = ResolveModules(configure);
         var appManager = new AppManagerBuilder(args)
             .ConfigureBuilder(configureBuilder)
-            .Build(configurationStrategy);
+            .Build(modules);
         appManager.Run();
     }
 
     /// <summary>
-    /// Creates, configures, and runs a web application asynchronously using the provided strategy.
+    /// Creates, configures, and runs a web application asynchronously using the provided modules.
+    /// When no modules are configured, modules are auto-discovered from the entry assembly.
     /// </summary>
     /// <param name="args">Command-line arguments.</param>
-    /// <param name="configurationStrategy">
-    /// The configuration strategy to use. If <c>null</c>, <see cref="DefaultAppConfiguration"/> is used.
+    /// <param name="configure">
+    /// An optional callback to register modules. If <c>null</c>, modules are discovered automatically
+    /// from the entry assembly.
     /// </param>
     /// <param name="configureBuilder">
     /// An optional callback to configure the <see cref="WebApplicationBuilder"/> before building.
     /// </param>
     /// <returns>A task that represents the lifetime of the application.</returns>
-    public static Task StartApplicationAsync(
+    public static Task StartAsync(
         string[] args,
-        IAppConfigurationStrategy? configurationStrategy = null,
+        Action<AppModuleCollection>? configure = null,
         Action<WebApplicationBuilder>? configureBuilder = null)
     {
         ArgumentNullException.ThrowIfNull(args);
 
-        configurationStrategy ??= new DefaultAppConfiguration();
+        var modules = ResolveModules(configure);
         var appManager = new AppManagerBuilder(args)
             .ConfigureBuilder(configureBuilder)
-            .Build(configurationStrategy);
+            .Build(modules);
         return appManager.RunAsync();
+    }
+
+    private static AppModuleCollection ResolveModules(Action<AppModuleCollection>? configure)
+    {
+        var modules = new AppModuleCollection();
+
+        if (configure is not null)
+        {
+            configure(modules);
+        }
+        else
+        {
+            var entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly is not null)
+            {
+                foreach (var module in ModuleDiscovery.DiscoverModules(entryAssembly))
+                {
+                    modules.Add(module);
+                }
+            }
+        }
+
+        return modules;
     }
 }
