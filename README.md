@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="logo.png" alt="TheAppManager" width="128" />
+</p>
+
 # TheAppManager
 
-> A .NET library that simplifies ASP.NET Core web application startup using the Strategy pattern.
+> A lightweight, composable module system for ASP.NET Core application startup.
 
 [![CI](https://github.com/phmatray/TheAppManager/actions/workflows/ci.yml/badge.svg)](https://github.com/phmatray/TheAppManager/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/TheAppManager.svg)](https://www.nuget.org/packages/TheAppManager)
@@ -10,27 +14,34 @@
 
 - [Overview](#overview)
   - [Architecture](#architecture)
+  - [Why Modules?](#why-modules)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [Custom Configuration](#custom-configuration)
-  - [Extending the Default Configuration](#extending-the-default-configuration)
-  - [Async Support](#async-support)
-  - [Builder Configuration Hook](#builder-configuration-hook)
-  - [Advanced: Using AppManagerBuilder](#advanced-using-appmanagerbuilder)
+- [Creating Modules](#creating-modules)
+  - [A Minimal Module](#a-minimal-module)
+  - [Module Ordering](#module-ordering)
+  - [Conditional Modules](#conditional-modules)
+- [Auto-Discovery](#auto-discovery)
+- [Multi-Assembly Scanning](#multi-assembly-scanning)
+- [Testing](#testing)
+  - [Integration Testing with AppModuleTestHost](#integration-testing-with-appmoduletesthost)
+  - [Replacing Modules in Tests](#replacing-modules-in-tests)
+- [Async Support](#async-support)
+- [Builder Configuration Hook](#builder-configuration-hook)
+- [Advanced: Using AppManagerBuilder](#advanced-using-appmanagerbuilder)
 - [Project Structure](#project-structure)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
 
-TheAppManager provides a clean abstraction (`IAppConfigurationStrategy`) for defining custom startup configurations in ASP.NET Core applications. Using the Strategy pattern, it makes it easy to swap configurations across environments, keep startup logic organized, and reduce boilerplate.
+TheAppManager lets you organize your ASP.NET Core startup into independent, composable **modules**. Each module encapsulates its own services, middleware, and endpoints — keeping `Program.cs` clean and making features reusable across projects.
 
 ### Architecture
 
 ```
                     ┌──────────────────────┐
-                    │   AppManager          │
-                    │   .StartApplication() │
+                    │   AppManager.Start() │
                     └──────────┬───────────┘
                                │
                     ┌──────────▼───────────┐
@@ -40,30 +51,38 @@ TheAppManager provides a clean abstraction (`IAppConfigurationStrategy`) for def
                     │  │ Builder         │ │
                     │  └─────────────────┘ │
                     └──────────┬───────────┘
-                               │ applies
-              ┌────────────────▼────────────────┐
-              │  IAppConfigurationStrategy       │
-              │  ├─ ConfigureServices()          │
-              │  ├─ ConfigureMiddleware()        │
-              │  └─ ConfigureEndpoints()         │
-              └────────────────┬────────────────┘
-                    ┌──────────┴──────────┐
-                    │                     │
-          ┌─────────▼──────┐   ┌──────────▼─────┐
-          │ DefaultApp     │   │ YourCustom     │
-          │ Configuration  │   │ Configuration  │
-          └────────────────┘   └────────────────┘
+                               │ applies in registration order
+              ┌────────────────┼────────────────┐
+              │                │                │
+    ┌─────────▼──────┐ ┌──────▼───────┐ ┌──────▼───────┐
+    │ SwaggerModule  │ │  AuthModule  │ │ WeatherModule│
+    │ ├ Services     │ │ ├ Services   │ │ ├ Services   │
+    │ └ Middleware   │ │ └ Middleware  │ │ └ Endpoints  │
+    └────────────────┘ └──────────────┘ └──────────────┘
 ```
+
+### Why Modules?
+
+As ASP.NET Core applications grow, `Program.cs` accumulates unrelated service registrations, middleware, and endpoint mappings. Modules solve this by letting each feature own its startup logic:
+
+- **Composable** — add, remove, or reorder modules without touching other code
+- **Reusable** — package a module in a NuGet library and share it across projects
+- **Testable** — each module can be tested in isolation with `AppModuleTestHost`
+- **Transparent ordering** — modules run in the order you register them, just like middleware
 
 ## Features
 
-- **Strategy pattern for startup** — Swap entire application configurations by implementing a single `IAppConfigurationStrategy` interface with three methods: services, middleware, and endpoints
-- **One-line startup** — Launch a fully configured ASP.NET Core app with `AppManager.StartApplication(args)` and sensible defaults
-- **Fluent builder API** — Use `AppManagerBuilder` to chain builder configuration, strategy application, and app construction in a readable pipeline
-- **Async support** — Run applications asynchronously with `StartApplicationAsync` and `RunAsync` for non-blocking startup scenarios
-- **Extensible default configuration** — Inherit from `DefaultAppConfiguration` and override only the methods you need, keeping the base HTTPS and routing behavior
-- **Builder hook** — Inject custom `WebApplicationBuilder` configuration (e.g., additional config sources, logging) via an `Action<WebApplicationBuilder>` callback
-- **Zero external dependencies** — Built solely on `Microsoft.AspNetCore.App` framework reference with no third-party runtime packages
+- **Composable modules** — encapsulate services, middleware, and endpoints into independent `IAppModule` implementations
+- **Registration-order execution** — modules are applied in the order you add them, no magic priority numbers
+- **Auto-discovery** — automatically find and register all `IAppModule` implementations in your assembly
+- **Multi-assembly scanning** — discover modules from referenced assemblies with `AddFromAssemblyOf<T>()`
+- **Conditional registration** — add modules only when conditions are met with `AddIf<T>(bool)`
+- **Module replacement** — swap modules for test doubles with `Replace<TOld, TNew>()`
+- **Test host** — `AppModuleTestHost` builds a TestServer from modules for integration testing
+- **Fluent API** — chain module registrations for readable startup code
+- **Async support** — run applications asynchronously with `StartAsync` and `RunAsync`
+- **Builder hook** — customize `WebApplicationBuilder` before modules are applied
+- **Zero external dependencies** — built solely on `Microsoft.AspNetCore.App` framework reference
 
 ## Installation
 
@@ -73,30 +92,43 @@ dotnet add package TheAppManager
 
 ## Quick Start
 
-The simplest way to use TheAppManager:
+Register modules explicitly in `Program.cs`:
 
 ```csharp
 using TheAppManager.Startup;
 
-AppManager.StartApplication(args);
+AppManager.Start(args, modules =>
+{
+    modules
+        .Add<SwaggerModule>()
+        .Add<AuthModule>()
+        .Add<WeatherModule>();
+});
 ```
 
-This uses `DefaultAppConfiguration`, which sets up HTTPS redirection and a root `/` endpoint.
-
-## Custom Configuration
-
-Create your own strategy by implementing `IAppConfigurationStrategy`:
+Or let TheAppManager discover modules automatically:
 
 ```csharp
 using TheAppManager.Startup;
 
-public class MyAppConfiguration : IAppConfigurationStrategy
+AppManager.Start(args);
+```
+
+## Creating Modules
+
+### A Minimal Module
+
+Implement `IAppModule` and override only what you need. All methods have default no-op implementations:
+
+```csharp
+using TheAppManager.Modules;
+
+public class SwaggerModule : IAppModule
 {
-    public void ConfigureServices(IServiceCollection services)
+    public void ConfigureServices(WebApplicationBuilder builder)
     {
-        services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
-        services.AddScoped<MyService>();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
     }
 
     public void ConfigureMiddleware(WebApplication app)
@@ -106,77 +138,194 @@ public class MyAppConfiguration : IAppConfigurationStrategy
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-        app.UseHttpsRedirection();
+    }
+}
+```
+
+A module that only registers endpoints:
+
+```csharp
+public class WeatherModule : IAppModule
+{
+    public void ConfigureServices(WebApplicationBuilder builder)
+    {
+        builder.Services.AddScoped<WeatherForecastService>();
     }
 
     public void ConfigureEndpoints(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/", () => "Hello World!");
-        endpoints.MapGet("/api/data", (MyService svc) => svc.GetData());
+        endpoints.MapGet("/weatherforecast", (WeatherForecastService svc) =>
+            Results.Ok(svc.GetForecasts()));
     }
 }
 ```
 
-Then use it in `Program.cs`:
+Note that `ConfigureServices` receives `WebApplicationBuilder` (not just `IServiceCollection`), giving you access to `builder.Configuration`, `builder.Environment`, and `builder.Host` when you need them.
+
+### Module Ordering
+
+Modules are applied in **registration order** — the order you call `Add<T>()`. This is the same principle as ASP.NET Core middleware: what you register first runs first.
 
 ```csharp
-AppManager.StartApplication(args, new MyAppConfiguration());
-```
-
-### Extending the Default Configuration
-
-You can also extend `DefaultAppConfiguration`:
-
-```csharp
-public class MyAppConfiguration : DefaultAppConfiguration
+AppManager.Start(args, modules =>
 {
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        base.ConfigureServices(services);
-        services.AddScoped<MyService>();
-    }
+    modules
+        .Add<SwaggerModule>()    // services & middleware first
+        .Add<AuthModule>()       // auth middleware second
+        .Add<WeatherModule>();   // endpoints last
+});
+```
 
-    public override void ConfigureEndpoints(IEndpointRouteBuilder endpoints)
-    {
-        base.ConfigureEndpoints(endpoints);
-        endpoints.MapGet("/api/data", (MyService svc) => svc.GetData());
-    }
+### Conditional Modules
+
+Use `AddIf<T>()` to register modules based on runtime conditions:
+
+```csharp
+var isDev = builder.Environment.IsDevelopment();
+
+AppManager.Start(args, modules =>
+{
+    modules
+        .AddIf<SwaggerModule>(isDev)
+        .Add<AuthModule>()
+        .Add<WeatherModule>();
+});
+```
+
+## Auto-Discovery
+
+When you call `AppManager.Start(args)` without a configure callback, TheAppManager scans the entry assembly for all concrete classes implementing `IAppModule` with a parameterless constructor and registers them automatically (sorted alphabetically by type name for deterministic ordering).
+
+This is convenient for applications where module ordering doesn't matter, or where you're fine with alphabetical ordering.
+
+```csharp
+// Discovers and registers all IAppModule implementations in the entry assembly
+AppManager.Start(args);
+```
+
+For order-sensitive applications, prefer explicit registration.
+
+## Multi-Assembly Scanning
+
+When your modules live in referenced libraries, scan their assemblies explicitly:
+
+```csharp
+AppManager.Start(args, modules =>
+{
+    // Scan the assembly containing SwaggerModule for all modules
+    modules.AddFromAssemblyOf<SwaggerModule>();
+
+    // Or scan a specific assembly
+    modules.AddFromAssembly(typeof(SomeLibraryModule).Assembly);
+
+    // Mix with explicit registration
+    modules.Add<MyAppModule>();
+});
+```
+
+## Testing
+
+### Integration Testing with AppModuleTestHost
+
+`AppModuleTestHost` builds a TestServer from your modules, making integration tests simple:
+
+```csharp
+using TheAppManager.Testing;
+
+[Fact]
+public async Task WeatherEndpoint_ReturnsForecasts()
+{
+    await using var host = await new AppModuleTestHost()
+        .Add<WeatherModule>()
+        .StartAsync();
+
+    var client = host.GetTestClient();
+    var response = await client.GetAsync("/weatherforecast");
+
+    response.StatusCode.ShouldBe(HttpStatusCode.OK);
 }
 ```
 
-### Async Support
-
-Use `StartApplicationAsync` for async startup:
+You can also resolve services directly:
 
 ```csharp
-await AppManager.StartApplicationAsync(args, new MyAppConfiguration());
+await using var host = await new AppModuleTestHost()
+    .Add<WeatherModule>()
+    .StartAsync();
+
+var service = host.GetRequiredService<WeatherForecastService>();
 ```
 
-### Builder Configuration Hook
+### Replacing Modules in Tests
 
-Customize the `WebApplicationBuilder` directly:
+Use `Replace<TOld, TNew>()` to swap a real module for a test double:
 
 ```csharp
-AppManager.StartApplication(
+public class FakeAuthModule : IAppModule
+{
+    public void ConfigureServices(WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IAuthService, FakeAuthService>();
+    }
+}
+
+var modules = new AppModuleCollection()
+    .Add<AuthModule>()
+    .Add<WeatherModule>()
+    .Replace<AuthModule, FakeAuthModule>();
+```
+
+## Async Support
+
+Use `StartAsync` for async startup:
+
+```csharp
+await AppManager.StartAsync(args, modules =>
+{
+    modules
+        .Add<SwaggerModule>()
+        .Add<WeatherModule>();
+});
+```
+
+## Builder Configuration Hook
+
+Customize the `WebApplicationBuilder` before modules are applied:
+
+```csharp
+AppManager.Start(
     args,
-    new MyAppConfiguration(),
+    modules =>
+    {
+        modules
+            .Add<SwaggerModule>()
+            .Add<WeatherModule>();
+    },
     builder =>
     {
         builder.Configuration.AddJsonFile("custom-settings.json", optional: true);
     });
 ```
 
-### Advanced: Using AppManagerBuilder
+## Advanced: Using AppManagerBuilder
 
-For more control, use `AppManagerBuilder` directly:
+For full control, use `AppManagerBuilder` directly:
 
 ```csharp
+using TheAppManager.Modules;
+using TheAppManager.Startup;
+
+var modules = new AppModuleCollection()
+    .Add<SwaggerModule>()
+    .Add<AuthModule>()
+    .Add<WeatherModule>();
+
 var appManager = new AppManagerBuilder(args)
     .ConfigureBuilder(builder =>
     {
         builder.Configuration.AddJsonFile("custom-settings.json");
     })
-    .Build(new MyAppConfiguration());
+    .Build(modules);
 
 await appManager.RunAsync();
 ```

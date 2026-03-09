@@ -5,14 +5,14 @@ namespace TheAppManager.Tests;
 public class AppManagerTests
 {
     [Fact]
-    public void StartApplication_ThrowsOnNullArgs()
+    public void Start_ThrowsOnNullArgs()
     {
-        Assert.Throws<ArgumentNullException>(() => AppManager.StartApplication(null!));
+        Should.Throw<ArgumentNullException>(() => AppManager.Start(null!));
     }
 
     [Fact]
-    public async Task StartApplicationAsync_ThrowsOnNullArgs()
+    public async Task StartAsync_ThrowsOnNullArgs()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() => AppManager.StartApplicationAsync(null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => AppManager.StartAsync(null!));
     }
 }

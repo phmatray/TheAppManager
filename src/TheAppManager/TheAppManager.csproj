@@ -6,15 +6,18 @@
 
     <!-- NuGet Package Metadata -->
     <PackageId>TheAppManager</PackageId>
-    <Version>1.0.0</Version>
+    <Version>2.0.0</Version>
     <Authors>phmatray</Authors>
-    <Description>A .NET library that simplifies ASP.NET Core web application startup using the Strategy pattern.</Description>
+    <Copyright>Copyright (c) phmatray</Copyright>
+    <Description>A lightweight, composable module system for ASP.NET Core application startup. Organize services, middleware, and endpoints into independent, reusable modules with auto-discovery support.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/phmatray/TheAppManager</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>aspnetcore;startup;strategy-pattern;configuration</PackageTags>
+    <PackageTags>aspnetcore;modules;composable;startup;auto-discovery;minimal-api</PackageTags>
     <PackageProjectUrl>https://github.com/phmatray/TheAppManager</PackageProjectUrl>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageReleaseNotes>v2.0.0: Complete redesign — composable module system replacing the strategy pattern.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +26,15 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\logo.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TheAppManager.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.3" />
   </ItemGroup>
 
 </Project>

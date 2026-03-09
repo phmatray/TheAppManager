@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Builder;
+using TheAppManager.Modules;
+
 namespace TheAppManager.Startup;
 
 /// <summary>
-/// Builds an <see cref="AppManager"/> by applying an <see cref="IAppConfigurationStrategy"/>
+/// Builds an <see cref="AppManager"/> by applying an <see cref="AppModuleCollection"/>
 /// to a <see cref="WebApplicationBuilder"/>.
 /// </summary>
 public class AppManagerBuilder
@@ -32,21 +35,35 @@ public class AppManagerBuilder
     }
 
     /// <summary>
-    /// Builds the web application by applying the specified configuration strategy.
+    /// Builds the web application by applying all modules in order.
     /// </summary>
-    /// <param name="configurationStrategy">The strategy that configures services, middleware, and endpoints.</param>
+    /// <param name="modules">The module collection that configures services, middleware, and endpoints.</param>
     /// <returns>A configured <see cref="AppManager"/> ready to run.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configurationStrategy"/> is <c>null</c>.</exception>
-    public AppManager Build(IAppConfigurationStrategy configurationStrategy)
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="modules"/> is <c>null</c>.</exception>
+    public AppManager Build(AppModuleCollection modules)
     {
-        ArgumentNullException.ThrowIfNull(configurationStrategy);
+        ArgumentNullException.ThrowIfNull(modules);
 
         _configureBuilder?.Invoke(_builder);
-        configurationStrategy.ConfigureServices(_builder.Services);
+
+        var registeredModules = modules.GetModules();
+
+        foreach (var module in registeredModules)
+        {
+            module.ConfigureServices(_builder);
+        }
 
         var app = _builder.Build();
-        configurationStrategy.ConfigureMiddleware(app);
-        configurationStrategy.ConfigureEndpoints(app);
+
+        foreach (var module in registeredModules)
+        {
+            module.ConfigureMiddleware(app);
+        }
+
+        foreach (var module in registeredModules)
+        {
+            module.ConfigureEndpoints(app);
+        }
 
         return new AppManager(app);
     }

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
+using TheAppManager.Modules;
 using TheAppManager.Startup;
 
 namespace TheAppManager.Tests;
@@ -10,97 +10,127 @@ public class AppManagerBuilderTests
     [Fact]
     public void Build_CallsConfigureServices()
     {
-        var strategy = new TestStrategy();
-        var builder = new AppManagerBuilder([]);
+        var module = new TestModule();
+        var modules = new AppModuleCollection();
+        modules.Add(module);
 
-        builder.Build(strategy);
+        new AppManagerBuilder([]).Build(modules);
 
-        Assert.True(strategy.ConfigureServicesCalled);
+        module.ConfigureServicesCalled.ShouldBeTrue();
     }
 
     [Fact]
     public void Build_CallsConfigureMiddleware()
     {
-        var strategy = new TestStrategy();
-        var builder = new AppManagerBuilder([]);
+        var module = new TestModule();
+        var modules = new AppModuleCollection();
+        modules.Add(module);
 
-        builder.Build(strategy);
+        new AppManagerBuilder([]).Build(modules);
 
-        Assert.True(strategy.ConfigureMiddlewareCalled);
+        module.ConfigureMiddlewareCalled.ShouldBeTrue();
     }
 
     [Fact]
     public void Build_CallsConfigureEndpoints()
     {
-        var strategy = new TestStrategy();
-        var builder = new AppManagerBuilder([]);
+        var module = new TestModule();
+        var modules = new AppModuleCollection();
+        modules.Add(module);
 
-        builder.Build(strategy);
+        new AppManagerBuilder([]).Build(modules);
 
-        Assert.True(strategy.ConfigureEndpointsCalled);
+        module.ConfigureEndpointsCalled.ShouldBeTrue();
     }
 
     [Fact]
     public void Build_ReturnsAppManagerInstance()
     {
-        var strategy = new TestStrategy();
-        var builder = new AppManagerBuilder([]);
+        var modules = new AppModuleCollection();
 
-        var appManager = builder.Build(strategy);
+        var appManager = new AppManagerBuilder([]).Build(modules);
 
-        Assert.NotNull(appManager);
+        appManager.ShouldNotBeNull();
     }
 
     [Fact]
-    public void Build_ThrowsOnNullStrategy()
+    public void Build_ThrowsOnNullModules()
     {
         var builder = new AppManagerBuilder([]);
 
-        Assert.Throws<ArgumentNullException>(() => builder.Build(null!));
+        Should.Throw<ArgumentNullException>(() => builder.Build(null!));
     }
 
     [Fact]
     public void Constructor_ThrowsOnNullArgs()
     {
-        Assert.Throws<ArgumentNullException>(() => new AppManagerBuilder(null!));
+        Should.Throw<ArgumentNullException>(() => new AppManagerBuilder(null!));
     }
 
     [Fact]
     public void ConfigureBuilder_InvokesCallbackBeforeBuild()
     {
-        var strategy = new TestStrategy();
-        var builder = new AppManagerBuilder([]);
+        var modules = new AppModuleCollection();
         var callbackInvoked = false;
 
+        var builder = new AppManagerBuilder([]);
         builder.ConfigureBuilder(b =>
         {
             callbackInvoked = true;
-            Assert.NotNull(b);
+            b.ShouldNotBeNull();
         });
-        builder.Build(strategy);
+        builder.Build(modules);
 
-        Assert.True(callbackInvoked);
+        callbackInvoked.ShouldBeTrue();
     }
 
     [Fact]
     public void ConfigureBuilder_WithNull_DoesNotThrow()
     {
-        var strategy = new TestStrategy();
+        var modules = new AppModuleCollection();
         var builder = new AppManagerBuilder([]);
 
         builder.ConfigureBuilder(null);
-        var appManager = builder.Build(strategy);
+        var appManager = builder.Build(modules);
 
-        Assert.NotNull(appManager);
+        appManager.ShouldNotBeNull();
     }
 
-    private class TestStrategy : IAppConfigurationStrategy
+    [Fact]
+    public void Build_AppliesModulesInRegistrationOrder()
+    {
+        var callOrder = new List<string>();
+        var first = new TrackingModule("first", callOrder);
+        var second = new TrackingModule("second", callOrder);
+        var third = new TrackingModule("third", callOrder);
+
+        var modules = new AppModuleCollection();
+        modules.Add(first);
+        modules.Add(second);
+        modules.Add(third);
+
+        new AppManagerBuilder([]).Build(modules);
+
+        callOrder.ShouldBe(["first", "second", "third"]);
+    }
+
+    [Fact]
+    public void Build_WithEmptyModules_Succeeds()
+    {
+        var modules = new AppModuleCollection();
+
+        var appManager = new AppManagerBuilder([]).Build(modules);
+
+        appManager.ShouldNotBeNull();
+    }
+
+    private class TestModule : IAppModule
     {
         public bool ConfigureServicesCalled { get; private set; }
         public bool ConfigureMiddlewareCalled { get; private set; }
         public bool ConfigureEndpointsCalled { get; private set; }
 
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(WebApplicationBuilder builder)
         {
             ConfigureServicesCalled = true;
         }
@@ -113,6 +143,14 @@ public class AppManagerBuilderTests
         public void ConfigureEndpoints(IEndpointRouteBuilder endpoints)
         {
             ConfigureEndpointsCalled = true;
+        }
+    }
+
+    private class TrackingModule(string name, List<string> callOrder) : IAppModule
+    {
+        public void ConfigureServices(WebApplicationBuilder builder)
+        {
+            callOrder.Add(name);
         }
     }
 }
