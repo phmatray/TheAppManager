@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using TheAppManager.Modules;
 using TheAppManager.Startup;
 
 namespace TheAppManager.Tests;
@@ -14,5 +17,71 @@ public class AppManagerTests
     public async Task StartAsync_ThrowsOnNullArgs()
     {
         await Should.ThrowAsync<ArgumentNullException>(() => AppManager.StartAsync(null!));
+    }
+
+    [Fact]
+    public async Task StartAsync_WithModules_RunsAndCompletes()
+    {
+        await AppManager.StartAsync([], modules =>
+        {
+            modules.Add(new ShutdownModule());
+        });
+    }
+
+    [Fact]
+    public async Task StartAsync_WithConfigureBuilder_AppliesConfiguration()
+    {
+        var builderConfigured = false;
+
+        await AppManager.StartAsync([],
+            modules => modules.Add(new ShutdownModule()),
+            _ => builderConfigured = true);
+
+        builderConfigured.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task StartAsync_WithEndpointModule_RegistersEndpoints()
+    {
+        var endpointConfigured = false;
+
+        await AppManager.StartAsync([], modules =>
+        {
+            modules.Add(new EndpointTrackingModule(() => endpointConfigured = true));
+            modules.Add(new ShutdownModule());
+        });
+
+        endpointConfigured.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task RunAsync_CompletesWhenApplicationStops()
+    {
+        var modules = new AppModuleCollection();
+        modules.Add(new ShutdownModule());
+
+        var appManager = new AppManagerBuilder([]).Build(modules);
+
+        await appManager.RunAsync();
+    }
+
+    private class ShutdownModule : IAppModule
+    {
+        public void ConfigureMiddleware(WebApplication app)
+        {
+            app.Lifetime.ApplicationStarted.Register(() =>
+            {
+                app.Lifetime.StopApplication();
+            });
+        }
+    }
+
+    private class EndpointTrackingModule(Action onConfigure) : IAppModule
+    {
+        public void ConfigureEndpoints(IEndpointRouteBuilder endpoints)
+        {
+            onConfigure();
+            endpoints.MapGet("/track", () => "tracked");
+        }
     }
 }
