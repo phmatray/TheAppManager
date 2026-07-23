@@ -340,6 +340,20 @@ samples/TheAppManager.Sample/   → Sample web app demonstrating usage
 tests/TheAppManager.Tests/      → Unit and integration tests
 ```
 
+<!-- portfolio-techstack:start -->
+
+## Tech Stack
+
+- **C#**
+- Swashbuckle.AspNetCore
+- Microsoft.AspNetCore.TestHost
+- Microsoft.AspNetCore.Mvc.Testing
+- Shouldly
+- xunit
+- xunit.runner.visualstudio
+
+<!-- portfolio-techstack:end -->
+
 ## Contributing
 
 1. Fork the repository
