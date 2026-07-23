@@ -1,3 +1,5 @@
+![TheAppManager banner](.github/banner.png)
+
 <p align="center">
   <img src="logo.png" alt="TheAppManager" width="128" />
 </p>
