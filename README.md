@@ -92,6 +92,30 @@ As ASP.NET Core applications grow, `Program.cs` accumulates unrelated service re
 dotnet add package TheAppManager
 ```
 
+## Usage
+
+Clone the repository and run the bundled sample, which wires up `SwaggerModule`, `AuthModule`, and `WeatherModule` through `AppManager.Start`:
+
+```bash
+dotnet run --project samples/TheAppManager.Sample
+```
+
+This starts an ASP.NET Core app with Swagger UI (in development) and a `/weatherforecast` endpoint, each contributed by its own `IAppModule` — no logic in `Program.cs` beyond the module list. In your own project, the minimal integration looks like:
+
+```csharp
+using TheAppManager.Startup;
+
+AppManager.Start(args, modules =>
+{
+    modules
+        .Add<SwaggerModule>()
+        .Add<AuthModule>()
+        .Add<WeatherModule>();
+});
+```
+
+See [Creating Modules](#creating-modules) below for how to implement `IAppModule`.
+
 ## Quick Start
 
 Register modules explicitly in `Program.cs`:
@@ -353,6 +377,16 @@ tests/TheAppManager.Tests/      → Unit and integration tests
 - xunit.runner.visualstudio
 
 <!-- portfolio-techstack:end -->
+
+## Roadmap
+
+- [ ] Module dependency declarations (e.g. `DependsOn<T>()`) to enforce ordering automatically
+- [ ] Health-check integration for modules that expose their own health endpoints
+- [ ] Source-generator based auto-discovery to avoid runtime assembly scanning
+- [ ] Additional samples (minimal API-only, Blazor Server) alongside the existing sample app
+- [ ] Configuration validation hooks per module (fail fast on missing settings)
+
+See the [open issues](https://github.com/Atypical-Consulting/TheAppManager/issues) for details and to propose new ideas.
 
 ## Contributing
 
